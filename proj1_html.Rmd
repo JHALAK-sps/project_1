@@ -1,0 +1,117 @@
+---
+title: 'MSDS Fall 2021   Project: 1'
+author: "Jhalak Das"
+date: "9/19/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(stringr)
+library(DT)
+```
+
+
+
+```{r}
+fileData <- read.csv(file="C:/R Files/R assignment/Project_1/tournamentinfo.txt", skip = 3, header = F)
+```
+
+``
+
+```{r}
+delimitedData <- str_split(fileData[,], "-", simplify=TRUE)
+```
+
+
+```{r}
+PlayerNames <- unlist(str_extract_all(delimitedData[,], "\\w+[[:space:]]\\w+([[:space:]]\\w+)*", simplify=TRUE))
+PlayerNames <- PlayerNames[!PlayerNames[,] == "",]
+```
+
+
+```{r}
+PlayerStates <- unlist(str_extract_all(delimitedData[,],"[A-Z][A-Z][[:space:]][\\|]"))
+PlayerStates <- str_split(PlayerStates, "[[:space:]][\\|]", simplify=TRUE)
+PlayerStates <- PlayerStates[, -2]
+```
+
+
+```{r}
+TotalPoints <- unlist(str_extract_all(delimitedData[,], "(\\d+)[.](\\d+)", simplify=TRUE))
+TotalPoints <- TotalPoints[!TotalPoints[,] == "",]
+```
+
+
+```{r}
+PreRatings <- unlist(str_extract_all(delimitedData[,], "[R:]([[:space:]]+)([[:alnum:]]+)([[:space:]]*)", simplify=TRUE))
+PreRatings <- unlist(str_extract_all(PreRatings, "\\d+[[:alnum:]]+", simplify=TRUE))
+PreRatings <- unlist(str_extract_all(PreRatings, "\\d\\d\\d+", simplify=TRUE))
+PreRatings <- PreRatings[!PreRatings[,] == "",]
+PreRatings <- as.numeric(PreRatings)
+```
+
+
+```{r}
+OpponentData <- unlist(str_extract_all(delimitedData[,], "([\\|][A-Z]([[:space:]]+)\\d*[\\|])([A-Z]([[:space:]]+)\\d*[\\|])*", simplify=TRUE))
+Opponents <- matrix(ncol=7)
+```
+
+
+```{r}
+Opponents <- unlist(str_extract_all(OpponentData[,], "\\d+", simplify=TRUE))
+Opponents <- Opponents[rowSums(Opponents=="")!=ncol(Opponents), ]
+```
+
+
+```{r}
+RatingAverages = NULL
+```
+
+
+```{r}
+for(row in 1:nrow(Opponents)){
+  numberOfOpponents = 0
+  sum = 0
+  
+  for(col in 1:ncol(Opponents)){
+    
+    if(Opponents[row, col] != ""){ # Check to make sure we are not looking at a null opponent index value
+      index <- Opponents[row, col] # Get the Opponent Index
+      index <- strtoi(index, base=0L) # Convert to integer
+      sum = sum + strtoi(PreRatings[index]) # Update sum of corresponding pre-ratings
+      numberOfOpponents = numberOfOpponents + 1 # Update number of opponents
+    }
+  }
+  
+  avg = sum/numberOfOpponents
+  RatingAverages = rbind(RatingAverages, data.frame(avg))
+}
+```
+
+
+```{r}
+TournamentResults <- data.frame(PlayerNames, PlayerStates, TotalPoints, PreRatings, RatingAverages)
+colnames(TournamentResults) <- c("Player Name","Player State", "Total Number of Points", "Player's Pre-Rating", "Average Pre Chess Rating of Opponents")
+
+write.csv(TournamentResults,'C:/R Files/R assignment/Project_1/Results.csv', TRUE)
+```
+
+
+Cleaned up data that can go to .CSV file
+  #tournamentResults
+```{r}
+datatable(TournamentResults)
+```
+
+
+Some statistics
+Average Player Pre-Rating for each Player State
+```{r}
+StateAvgPreRatings <- data.frame(aggregate(TournamentResults[,4], list(TournamentResults$`Player State`), mean))
+colnames(StateAvgPreRatings) <- c("Player State", "Average Player's Pre-Rating")
+StateAvgPreRatings
+```
